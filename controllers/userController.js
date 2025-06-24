@@ -56,25 +56,68 @@ exports.registerUser = async (req, res) => {
     }
 }
 
-exports.verifyEmail = async(req, res) => {
+exports.verifyEmail = async (req, res) => {
 
     const { token } = req.query;
 
-    try{
+    try {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id);
 
-        if(!user){
-            return res.status(404).json({status:'failed', err:'User not found.'});
+        if (!user) {
+            return res.status(404).json({ status: 'failed', err: 'User not found.' });
         }
 
         user.isVerified = true;
         await user.save();
 
-        res.status(200).json({status:'success', info:'Email verified! You can now log in.'});
+        res.status(200).json({ status: 'success', info: 'Email verified! You can now log in.' });
 
-    }catch(err){
+    } catch (err) {
         res.status(500).json({ status: 'failed', error: err.message || 'Invalid or Expired token' });
     }
 };
+
+exports.userLogin = async (req, res) => {
+
+    const { email, password } = req.body;
+
+    if (!email || !password) return res.status(404).json({ status: 'failed', err: 'Email or Password not found.' });
+
+    try {
+        const user = await User.findOne({ email });
+
+        if (!user) return res.status(404).json({ status: 'failed', err: 'User not found.' });
+
+        if (!user.isVerified) return res.status(401).json({ status: 'failed', err: 'Email is not verified.' });
+
+        const isPassCorrect = await bcrypt.compare(password, user.password);
+
+        if (isPassCorrect) {
+            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+            return res.status(200).json({ status: 'Success', token, info: 'Logged in successfully' });
+        } else {
+            return res.status(401).json({ status: 'Failed', err: 'Wrong Password.' });
+        }
+    } catch (err) {
+        return res.status(500).json({ status: 'Failed', err: err?.message || 'Server Error' });
+    }
+
+}
+
+exports.deleteAccount = async(req, res) => {
+
+    const id = req.user.id;
+
+    try {
+        const deletedUser = await User.findByIdAndDelete(id);
+
+        if (!deletedUser)
+            return res.status(404).json({ status: 'Failed', err: "User not found" });
+
+        res.status(200).json({ status: 'Success', info: 'Account deleted successfully.' });
+    } catch (err) {
+        return res.status(500).json({ status: 'Failed', err: err?.message || 'Server Error' });
+    }
+}
