@@ -1,14 +1,11 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const app = require('./app');
+const server = require('./app');
 
-mongoose.connect(process.env.MONGO_URL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGO_URL)
   .then(() => {
     console.log('✅ Connected to MongoDB');
-    app.listen(3000, () => {
+    server.listen(3000, () => {
       console.log('🚀 Server running on http://localhost:3000');
     });
   })
