@@ -11,6 +11,8 @@ router.get('/verify-email', verifyEmail)
 
 router.post('/login', userLogin);
 
+// router.post('/change-password', changePass);
+
 router.delete('/delete', verifyToken, deleteAccount);
 
 module.exports = router;

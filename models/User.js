@@ -9,7 +9,8 @@ const userSchema = new Schema({
     },
     username:{
         type: String,
-        default: null
+        default: null,
+        unique: true
     },
     password:{
         type: String,
@@ -24,11 +25,7 @@ const userSchema = new Schema({
     isVerified:{
         type: Boolean,
         default: false
-    },
-    createdAt:{
-        type: Date,
-        default: Date.now
     }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

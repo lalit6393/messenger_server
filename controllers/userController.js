@@ -88,8 +88,6 @@ exports.userLogin = async (req, res) => {
     try {
         const user = await User.findOne({ email });
 
-        if (!user) return res.status(404).json({ status: 'failed', err: 'User not found.' });
-
         if (!user.isVerified) return res.status(401).json({ status: 'failed', err: 'Email is not verified.' });
 
         const isPassCorrect = await bcrypt.compare(password, user.password);
@@ -108,7 +106,7 @@ exports.userLogin = async (req, res) => {
 
 exports.deleteAccount = async(req, res) => {
 
-    const id = req.user.id;
+    const id = req.body.userId;
 
     try {
         const deletedUser = await User.findByIdAndDelete(id);
