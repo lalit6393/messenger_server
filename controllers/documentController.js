@@ -37,7 +37,6 @@ exports.createDocument = async (req, res) => {
     }
 }
 
-
 exports.getAllDocument = async (req, res) => {
     const { userId } = req.body;
 
@@ -47,7 +46,7 @@ exports.getAllDocument = async (req, res) => {
                 { owner: userId },
                 { 'collaborators.user': userId }
             ]
-        }).populate('currentVersion');
+        }).populate('collaborators.user');
 
         res.status(200).json({ status: 'success', data: documents });
 
@@ -57,7 +56,7 @@ exports.getAllDocument = async (req, res) => {
 }
 
 exports.addCollaborator = async (req, res) => {
-    const { userId, email, role, documentId } = req.body;
+    const { email, role, documentId } = req.body;
 
     try {
         const collaborator = await User.findOne({ email });
@@ -88,6 +87,84 @@ exports.addCollaborator = async (req, res) => {
         await document.save();
         await document.populate('collaborators.user');
 
+
+        res.status(200).json({ status: 'success', data: document });
+
+    } catch (err) {
+        res.status(500).json({ status: 'failed', err: err.message || 'Server Error' })
+    }
+}
+
+exports.getAllVersionDocuments = async (req, res) => {
+
+    const { documentId } = req.params;
+
+    try {
+        const documents = await DocumentVersion.find({ document: documentId }).populate('createdBy');
+
+        res.status(200).json({ status: 'success', data: documents });
+
+    } catch (err) {
+        res.status(500).json({ status: 'failed', err: err.message || 'Server Error' })
+    }
+}
+
+exports.updateDocument = async (req, res) => {
+    const { userId, content } = req.body;
+    const { documentId } = req.params;
+
+    try {
+        const document = await Document.findById(documentId);
+
+        if (!document) return res.status(404).json({ status: 'failed', err: 'Document not found.' });
+
+        if (String(document.owner) !== userId) {
+            const collaborator = document.collaborators.find((c) => String(c.user) === userId);
+
+            if (!collaborator || collaborator.role === 'viewer') return res.status(401).json({ status: 'failed', err: 'No edit access' });
+        }
+
+        const documentVersion = await DocumentVersion.create(
+            {
+                document: documentId,
+                content: content,
+                createdBy: userId
+            }
+        );
+
+        document.currentVersion = documentVersion._id;
+
+        await document.save();
+        await document.populate('currentVersion');
+
+        res.status(200).json({ status: 'success', data: document });
+
+    } catch (err) {
+        res.status(500).json({ status: 'failed', err: err.message || 'Server Error' })
+    }
+}
+
+exports.getCurrentDocumentVersion = async (req, res) => {
+
+    const { userId } = req.body;
+    const { documentId } = req.params;
+
+
+    try {
+        const document = await Document.findById(documentId);
+
+        if (!document) return res.status(404).json({ status: 'failed', err: 'Document not found.' });
+
+        if (String(document.owner) !== userId) {
+            const collaborator = document.collaborators.find((c) => String(c.user) === userId);
+
+            if (!collaborator) return res.status(401).json({ status: 'failed', err: 'No access to this document.' });
+        }
+
+        await document.populate([
+            { path: 'currentVersion' },
+            { path: 'collaborators.user' }
+        ]);
 
         res.status(200).json({ status: 'success', data: document });
 
