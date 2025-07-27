@@ -1,5 +1,5 @@
 const express = require('express');
-const { createDocument, getAllDocument, addCollaborator, getAllVersionDocuments, updateDocument, getCurrentDocumentVersion } = require('../controllers/documentController');
+const { createDocument, getAllDocument, addCollaborator, getAllVersionDocuments, updateDocument, getCurrentDocumentVersion, getSpecificVersionOfDocument } = require('../controllers/documentController');
 const { verifyToken } = require('../middleware/auth');
 
 
@@ -16,5 +16,7 @@ router.get('/document/:documentId', verifyToken, getAllVersionDocuments);
 router.put('/document/:documentId', verifyToken, updateDocument);
 
 router.get('/document/:documentId/version/latest', verifyToken, getCurrentDocumentVersion);
+
+router.get('/document/:documentId/version/:version', verifyToken, getSpecificVersionOfDocument);
 
 module.exports = router;

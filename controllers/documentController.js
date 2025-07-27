@@ -98,9 +98,13 @@ exports.addCollaborator = async (req, res) => {
 exports.getAllVersionDocuments = async (req, res) => {
 
     const { documentId } = req.params;
+    const page = parseInt(req.query.page) || 0;
+    const skip = page * 5;
+    console.log("page.........", page);
+    
 
     try {
-        const documents = await DocumentVersion.find({ document: documentId }).populate('createdBy');
+        const documents = await DocumentVersion.find({ document: documentId }).sort({ createdAt: -1 }).skip(skip).limit(5);
 
         res.status(200).json({ status: 'success', data: documents });
 
@@ -165,6 +169,35 @@ exports.getCurrentDocumentVersion = async (req, res) => {
             { path: 'currentVersion' },
             { path: 'collaborators.user' }
         ]);
+
+        res.status(200).json({ status: 'success', data: document });
+
+    } catch (err) {
+        res.status(500).json({ status: 'failed', err: err.message || 'Server Error' })
+    }
+}
+
+exports.getSpecificVersionOfDocument = async (req, res) => {
+
+    const { userId } = req.body;
+    const { version } = req.params;
+
+    try {
+        const versionDoc = await DocumentVersion.findById(version);
+        if (!versionDoc) return res.status(404).json({ status: 'failed', err: 'Document Version not found.' });
+
+        const document = await Document.findById(versionDoc.document);
+        if (!document) return res.status(404).json({ status: 'failed', err: 'Document not found.' });
+
+        if (String(document.owner) !== userId) {
+            const collaborator = document.collaborators.find((c) => String(c.user) === userId);
+
+            if (!collaborator) return res.status(401).json({ status: 'failed', err: 'No access to this document.' });
+        }
+
+        await versionDoc.populate('createdBy');
+
+        document.currentVersion = versionDoc;
 
         res.status(200).json({ status: 'success', data: document });
 
