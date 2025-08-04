@@ -1,5 +1,5 @@
 const express = require('express');
-const { registerUser, verifyEmail, userLogin, deleteAccount } = require('../controllers/userController');
+const { registerUser, verifyEmail, userLogin, deleteAccount, getUserDetails } = require('../controllers/userController');
 const { verifyToken } = require('../middleware/auth');
 
 
@@ -14,5 +14,7 @@ router.post('/login', userLogin);
 // router.post('/change-password', changePass);
 
 router.delete('/delete', verifyToken, deleteAccount);
+
+router.get('/user', verifyToken, getUserDetails);
 
 module.exports = router;

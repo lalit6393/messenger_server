@@ -119,3 +119,19 @@ exports.deleteAccount = async(req, res) => {
         return res.status(500).json({ status: 'Failed', err: err?.message || 'Server Error' });
     }
 }
+
+exports.getUserDetails = async(req, res) => {
+    const {userId} = req.body;
+
+    try{
+
+        const user = await User.findById(userId);
+
+        if(!userId || !user) return res.status(404).json({ status: 'Failed', err: "User not found" });
+        
+        res.status(200).json({ status: 'Success', data:user });
+
+    }catch (err) {
+        return res.status(500).json({ status: 'Failed', err: err?.message || 'Server Error' });
+    }
+}
