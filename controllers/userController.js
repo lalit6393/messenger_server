@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 const nodemailer = require("nodemailer");
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+require('dotenv').config();
+const hostname = process.env.HOSTNAME;
 
 exports.registerUser = async (req, res) => {
     const { email, password, fullname, dob } = req.body;
@@ -32,7 +34,7 @@ exports.registerUser = async (req, res) => {
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
 
-        const link = `http://localhost:3000/verify-email?token=${token}`;
+        const link = `${hostname}/verify-email?token=${token}`;
 
         const transporter = nodemailer.createTransport({
             service: "gmail",
