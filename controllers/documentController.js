@@ -1,6 +1,7 @@
 const Document = require("../models/Document");
 const User = require("../models/User");
 const DocumentVersion = require("../models/DocumentVersion");
+const nodemailer = require("nodemailer");
 
 exports.createDocument = async (req, res) => {
     const { userId, content, title, description } = req.body;
@@ -56,18 +57,23 @@ exports.getAllDocument = async (req, res) => {
 }
 
 exports.addCollaborator = async (req, res) => {
-    const { email, role, documentId } = req.body;
+    const { email, role, documentId, userId } = req.body;
 
     try {
         const collaborator = await User.findOne({ email });
+        const owner = await User.findById(userId);
 
-        if (!collaborator) {
+        if (!collaborator || !owner) {
             return res.status(404).json({ status: 'failed', err: 'User not found' });
         }
 
         const document = await Document.findById(documentId);
         if (!document) {
             return res.status(404).json({ status: 'failed', err: 'Document not found' });
+        }
+
+        if (String(owner._id) !== String(document.owner)) {
+            return res.status(400).json({ status: 'failed', err: 'You don not have permission to add collaborator.' });
         }
 
         if (String(document.owner) === String(collaborator._id)) {
@@ -87,7 +93,24 @@ exports.addCollaborator = async (req, res) => {
         await document.save();
         await document.populate('collaborators.user');
 
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "lalitverma7511@gmail.com",
+                pass: process.env.GOOGLE_APP_PASSWORD,
+            },
+        });
 
+        await transporter.sendMail({
+            from: '"App Support" <lalitverma7511@gmail.com>',
+            to: email,
+            subject: `Added as a collaborator by ${owner.fullname}`,
+            html: `<div>
+                <p>Title: ${document.title}</p>
+                <p>Description: ${document.description}</p>
+                <a href='${process.env.FRONTEND_URL}/documents/details/${documentId}'>View</a>
+            </div>`
+        });
         res.status(200).json({ status: 'success', data: document });
 
     } catch (err) {
@@ -209,11 +232,11 @@ exports.restoreToVersion = async (req, res) => {
     const { userId } = req.body;
     const { documentId, versionId } = req.params;
 
-    try{
-        if(!documentId || !versionId) return res.status(404).json({ status: 'failed', err: 'Document or Version id not found.' });
+    try {
+        if (!documentId || !versionId) return res.status(404).json({ status: 'failed', err: 'Document or Version id not found.' });
 
         const versionDoc = await DocumentVersion.findById(versionId);
-        if(!versionDoc) return res.status(404).json({ status: 'failed', err: 'Document Version not found.' });
+        if (!versionDoc) return res.status(404).json({ status: 'failed', err: 'Document Version not found.' });
 
         const document = await Document.findById(documentId);
 
@@ -221,16 +244,16 @@ exports.restoreToVersion = async (req, res) => {
             const collaborator = document.collaborators.find((c) => String(c.user) === userId);
 
             if (!collaborator) return res.status(401).json({ status: 'failed', err: 'No access to this document.' });
-            else if(collaborator.role !== 'editor') return res.status(401).json({ status: 'failed', err: 'No edit access to this document.' });
+            else if (collaborator.role !== 'editor') return res.status(401).json({ status: 'failed', err: 'No edit access to this document.' });
         }
 
         document.currentVersion = versionDoc._id;
 
         await document.save();
-        
-        res.status(200).json({status:'success', data : {message: 'Version Restored'}});
 
-    }catch(err){
+        res.status(200).json({ status: 'success', data: { message: 'Version Restored' } });
+
+    } catch (err) {
         res.status(500).json({ status: 'failed', err: err.message || 'Server Error' });
     }
 }
