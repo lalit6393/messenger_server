@@ -218,6 +218,7 @@ exports.getSpecificVersionOfDocument = async (req, res) => {
         }
 
         await versionDoc.populate('createdBy');
+        await document.populate('collaborators.user');
 
         document.specificVersion = versionDoc;
 
